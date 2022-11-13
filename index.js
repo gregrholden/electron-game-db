@@ -66,7 +66,7 @@ async function createWindow() {
   // Track and manage window state.
   winState.manage(mainWindow)
   // Open Chromium DevTools.
-  // mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 }
 
 // When the app is "ready" then we can add listeners and event handlers to it.

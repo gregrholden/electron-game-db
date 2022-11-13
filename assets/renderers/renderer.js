@@ -3,7 +3,7 @@
 ///////////////////////////////////
 const libTable = document.getElementById('gameTable')
 let tableHeaders = new Array()
-tableHeaders = ['Game','Developer','Publisher','Release Date','Platform','Tags']
+tableHeaders = ['Game','Developer','Publisher','Release Date','Platform','Tags', 'Delete?']
 // Invoke the exposed libraryAPI.
 window.libraryAPI.handleExistingGames((event, games) => {
   // Initialize new table and its headers.
@@ -18,34 +18,7 @@ window.libraryAPI.handleExistingGames((event, games) => {
   }
   // Create table rows.
   for (let g = 0; g < games.length; g++) {
-    // Create a new row.
-    let tr2 = emptyTable.insertRow(-1)
-    tr2.setAttribute('id', 'gid-' + (games[g].gid))
-    // Game.
-    let game = document.createElement('td')
-    game.innerHTML = games[g].name
-    tr2.appendChild(game)
-    // Developer.
-    let dev = document.createElement('td')
-    dev.innerHTML = games[g].developer
-    tr2.appendChild(dev)
-    // Publisher
-    let pub = document.createElement('td')
-    pub.innerHTML = games[g].publisher
-    tr2.appendChild(pub)
-    // Release Date.
-    let rel = document.createElement('td')
-    rel.innerHTML = games[g].release_date
-    tr2.appendChild(rel)
-    // Platform.
-    let plat = document.createElement('td')
-    plat.innerHTML = games[g].platform
-    tr2.appendChild(plat)
-    // Tags.
-    console.log(games[g].Tags)
-    let tags = document.createElement('td')
-    tags.innerHTML = games[g].Tags.slice(1)
-    tr2.appendChild(tags)
+    emptyTable.appendChild(createGameRow(games[g]))
   }
   // Append the dynamic table from above to our gameTable div on index.html.
   libTable.appendChild(emptyTable)
@@ -67,32 +40,7 @@ window.libraryAPI.handleUpdateGames((event, game) => {
   if (document.getElementById('gameLib') !== null) {
     let gameLib = document.getElementById('gameLib')
     // Append new row to the game library table.
-    let row = gameLib.insertRow(-1)
-    row.setAttribute('id', 'gid-' + game.gid)
-    // Game.
-    let nameCell = row.insertCell(0)
-    let nameText = document.createTextNode(game.name)
-    nameCell.appendChild(nameText)
-    // Developer.
-    let devCell = row.insertCell(1)
-    let devText = document.createTextNode(game.developer)
-    devCell.appendChild(devText)
-    // Publisher.
-    let pubCell = row.insertCell(2)
-    let pubText = document.createTextNode(game.publisher)
-    pubCell.appendChild(pubText)
-    // Release Date.
-    let relCell = row.insertCell(3)
-    let relText = document.createTextNode(game.release_date)
-    relCell.appendChild(relText)
-    // Platform.
-    let platCell = row.insertCell(4)
-    let platText = document.createTextNode(game.platform)
-    platCell.appendChild(platText)
-    // Tags.
-    let tagCell = row.insertCell(5)
-    let tagText = document.createTextNode(game.Tags.slice(1))
-    tagCell.appendChild(tagText)
+    gameLib.appendChild(createGameRow(game))
   } else {
     // Should never reach here as the table is always created at app init.
     console.log("Cannot add game: 'gameLib' table does not yet exist!")
@@ -107,3 +55,37 @@ const addTagBtn = document.getElementById('addTagBtn')
 addTagBtn.addEventListener('click', async () => {
   await window.libraryAPI.handleAddTagBtn()
 })
+
+///////// FUNCTION TO CREATE GAME ROW DATA ON RENDERED TABLE ////////
+function createGameRow(game) {
+  // Append new row to the game library table.
+  let row = document.createElement("tr")
+  row.setAttribute('id', 'gid-' + game.gid)
+  // Game.
+  let nameCell = row.insertCell(0)
+  let nameText = document.createTextNode(game.name)
+  nameCell.appendChild(nameText)
+  // Developer.
+  let devCell = row.insertCell(1)
+  let devText = document.createTextNode(game.developer)
+  devCell.appendChild(devText)
+  // Publisher.
+  let pubCell = row.insertCell(2)
+  let pubText = document.createTextNode(game.publisher)
+  pubCell.appendChild(pubText)
+  // Release Date.
+  let relCell = row.insertCell(3)
+  let relText = document.createTextNode(game.release_date)
+  relCell.appendChild(relText)
+  // Platform.
+  let platCell = row.insertCell(4)
+  let platText = document.createTextNode(game.platform)
+  platCell.appendChild(platText)
+  // Tags.
+  let tagCell = row.insertCell(5)
+  let tagText = document.createTextNode(game.Tags.slice(1))
+  tagCell.appendChild(tagText)
+  // // Delete Button.
+
+  return row
+}

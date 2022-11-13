@@ -25,7 +25,7 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'assets/renderers/preload.js')
     }
   })
 
@@ -86,21 +86,21 @@ async function addGame() {
     modal: true,
     parent: mainWindow,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'assets/renderers/preload.js')
     }
   })
   addGameModal.on('closed', () => {
     addGameModal = null
   })
-  addGameModal.loadFile(path.join(__dirname, 'addGame.html'))
+  addGameModal.loadFile(path.join(__dirname, 'assets/modals/addGame.html'))
   addGameModal.on('ready-to-show', () => {
     addGameModal.show()
   })
 }
 
-/////////////////////////////
-/////// DB OPERATIONS ///////
-/////////////////////////////
+///////////////////////////////////
+/////// DATABASE OPERATIONS ///////
+///////////////////////////////////
 
 // Initialize SQLite3 database with default schema and values.
 async function initDB() {

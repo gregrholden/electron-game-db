@@ -2,7 +2,7 @@
   "name": "electron-game-db",
   "version": "1.0.0",
   "description": "A simple game database GUI built with Electron and SQLite",
-  "main": "main.js",
+  "main": "index.js",
   "build": {
     "appID": "com.electron-game-db",
     "files": [

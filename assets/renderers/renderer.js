@@ -51,7 +51,7 @@ window.libraryAPI.handleExistingGames((event, games) => {
 const addGameBtn = document.getElementById('addGameBtn')
 // Open a modal with the form to submit a new game.
 addGameBtn.addEventListener('click', async () => {
-  const newWindow = await window.libraryAPI.handleAddGameBtn()
+  await window.libraryAPI.handleAddGameBtn()
 })
 
 /////////////////////////////////////
@@ -60,7 +60,7 @@ addGameBtn.addEventListener('click', async () => {
 window.libraryAPI.handleUpdateGames((event, game) => {
   if (document.getElementById('gameLib') !== null) {
     let gameLib = document.getElementById('gameLib')
-    // Create new row at the end of our game library table.
+    // Append new row to the game library table.
     let row = gameLib.insertRow(-1)
     // Game.
     let nameCell = row.insertCell(0)
@@ -83,6 +83,7 @@ window.libraryAPI.handleUpdateGames((event, game) => {
     let platText = document.createTextNode(game.platform)
     platCell.appendChild(platText)
   } else {
+    // Should never reach here as the table is always created at app init.
     console.log("Cannot add game: 'gameLib' table does not yet exist!")
   }
 })

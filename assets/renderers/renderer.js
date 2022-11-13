@@ -20,6 +20,7 @@ window.libraryAPI.handleExistingGames((event, games) => {
   for (let g = 0; g < games.length; g++) {
     // Create a new row.
     let tr2 = emptyTable.insertRow(-1)
+    tr2.setAttribute('id', 'gid-' + (games[g].gid))
     // Game.
     let game = document.createElement('td')
     game.innerHTML = games[g].name
@@ -62,6 +63,7 @@ window.libraryAPI.handleUpdateGames((event, game) => {
     let gameLib = document.getElementById('gameLib')
     // Append new row to the game library table.
     let row = gameLib.insertRow(-1)
+    row.setAttribute('id', 'gid-' + game.gid)
     // Game.
     let nameCell = row.insertCell(0)
     let nameText = document.createTextNode(game.name)

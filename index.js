@@ -5,9 +5,19 @@ const sqlite3 = require('sqlite3').verbose()
 const { open } = require('sqlite')
 const path = require('path')
 const DATABASE = './assets/gameDB.sqlite';
-
+// Prevent garbage collection on mainWindow.
 let mainWindow
 
+// DB connection driver.
+async function getDBDriver() {
+  const db = await open({
+    filename: DATABASE,
+    driver: sqlite3.Database
+  })
+  return db
+}
+
+// Main window creation.
 async function createWindow() {
   // Create window state manager.
   let winState = windowStateKeeper({
@@ -60,11 +70,19 @@ app.whenReady().then(() => {
   // Modal window to add a new game.
   ipcMain.handle('modal:addGame', addGame)
   // Event handler for when a new game is submitted via the above modal.
-  ipcMain.on('submitGame', (event, gameData) => {
+  ipcMain.on('submitGame', async (event, gameData) => {
     // Insert new game into database.
-    insertGame(gameData)
-    // Then update the library on the renderer.
-    mainWindow.webContents.send('update-games', gameData)
+    if (gameData.name) {
+      let gid = await insertGame(gameData)
+      // Get the game data (with autoincremented gid) from insert above.
+      let newGameData = await getRowFromId('games', 'gid', gid.lastID)
+      // Then update the library on the renderer.
+      if (Object.keys(newGameData).length > 0) {
+        mainWindow.webContents.send('update-games', newGameData)
+      } else {
+        console.log("Nothing to update!")
+      }
+    }
   })
   // Initialize and create the main window.
   createWindow()
@@ -73,7 +91,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
-// Handle app close operation on macOS.
+// Keep app open on macOS due to how it handles app quit functionality.
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
@@ -104,11 +122,7 @@ async function addGame() {
 
 // Initialize SQLite3 database with default schema and values.
 async function initDB() {
-  // Establish DB connection config.
-  const db = await open({
-    filename: DATABASE,
-    driver: sqlite3.Database
-  })
+  const db = await getDBDriver()
   // Open database connection
   await db.open()
   // Create library schema.
@@ -166,14 +180,11 @@ async function initDB() {
   await db.close()
 }
 
+/////////////  SELECT * FROM `table`  /////////////
 // Using SELECT statement, return all values from specified table.
 async function getAllFromTable(table) {
+  const db = await getDBDriver()
   let result = []
-  // DB connection config.
-  const db = await open({
-    filename: DATABASE,
-    driver: sqlite3.Database
-  })
   // Our composed query.
   query = "SELECT * FROM " + table;
   // Open DB connection.
@@ -189,24 +200,45 @@ async function getAllFromTable(table) {
   return result
 }
 
+////////////////  INSERT INTO games () VALUES ()  ////////////////
+// Insert new game into database.
 async function insertGame(gameData) {
-  // DB connection config.
-  const db = await open({
-    filename: DATABASE,
-    driver: sqlite3.Database
-  })
+  const db = await getDBDriver()
   await db.open()
   const stmt = await db.prepare(
           "INSERT INTO games (name,developer,publisher,release_date,platform)" +
           " VALUES (?,?,?,?,?)"
         )
-  await stmt.run(
+  let id = await stmt.run([
           gameData.name,
           gameData.developer,
           gameData.publisher,
           gameData.release_date,
           gameData.platform
-        )
-  await stmt.finalize()
+        ],
+        // Get the primary key ID of this inserted row.
+        function () { return this.lastID }
+      )
+  await stmt.finalize(() => {
+
+  })
   await db.close()
+  return id
+}
+
+//////// SELECT * FROM `table` WHERE `idName` = '`id`' ////////
+// Retrieve specified table row from provided primary key ID.
+async function getRowFromId(table, idName, id) {
+  let result = {}
+  const db = await getDBDriver()
+  // Compose query.
+  query = "SELECT * FROM " + table + " WHERE " + idName + " = '" + id + "'"
+  await db.open()
+  // Retrieve object from database.
+  result = await db.get(query, [], (err, row) => {
+    if (err) return console.error(err)
+    return row
+  })
+  await db.close()
+  return result
 }

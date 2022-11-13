@@ -48,7 +48,7 @@ window.libraryAPI.handleUpdateGames((event, game) => {
 })
 
 ///////////////////////////////////
-///// HANDLE ADD TAG BUTTON //////
+///// HANDLE ADD TAG BUTTON ///////
 ///////////////////////////////////
 const addTagBtn = document.getElementById('addTagBtn')
 // Open a modal with the form to submit a new game.
@@ -56,11 +56,21 @@ addTagBtn.addEventListener('click', async () => {
   await window.libraryAPI.handleAddTagBtn()
 })
 
-///////// FUNCTION TO CREATE GAME ROW DATA ON RENDERED TABLE ////////
+//////////////////////////////////////////////
+///// HANDLE REMOVE ROW AFTER DELETION ///////
+//////////////////////////////////////////////
+window.libraryAPI.handleRemoveGameRow((event, gid) => {
+  document.getElementById('row-id-' + gid).remove()
+})
+
+
+//////////////////////////////
+///// CREATE TABLE ROW ///////
+//////////////////////////////
 function createGameRow(game) {
   // Append new row to the game library table.
   let row = document.createElement("tr")
-  row.setAttribute('id', 'gid-' + game.gid)
+  row.setAttribute('id', 'row-id-' + game.gid)
   // Game.
   let nameCell = row.insertCell(0)
   let nameText = document.createTextNode(game.name)
@@ -85,7 +95,17 @@ function createGameRow(game) {
   let tagCell = row.insertCell(5)
   let tagText = document.createTextNode(game.Tags.slice(1))
   tagCell.appendChild(tagText)
-  // // Delete Button.
+  // Delete Button.
+  let delCell = row.insertCell(6)
+  let delBtn = document.createElement("button")
+  // Give delete button the ID the game targeted for deletion.
+  delBtn.setAttribute('id', game.gid)
+  delBtn.setAttribute('class', 'deleteBtn')
+  delBtn.innerText = "Delete"
+  delCell.appendChild(delBtn)
+  delBtn.addEventListener('click', async (event) => {
+    await window.libraryAPI.handleGameDeleteBtn(event.target.id)
+  })
 
   return row
 }

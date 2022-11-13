@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('libraryAPI', {
   handleExistingViews: (callback) => ipcRenderer.on('existing-views', callback),
   handleAddGameBtn:    ()         => ipcRenderer.invoke('modal:addGame'),
   handleSubmitGameBtn: (gameData) => ipcRenderer.send('submitGame', gameData),
-  handleAddTagBtn: () => ipcRenderer.invoke('modal:addTag'),
-  handleSubmitTagBtn: (tagData) => ipcRenderer.send('submitTag', tagData)
+  handleAddTagBtn:     ()         => ipcRenderer.invoke('modal:addTag'),
+  handleSubmitTagBtn:  (tagData)  => ipcRenderer.send('submitTag', tagData),
+  handleGameDeleteBtn: (gid)      => ipcRenderer.send('deleteGame', gid),
+  handleRemoveGameRow: (callback) => ipcRenderer.on('remove-game-row', callback)
 });

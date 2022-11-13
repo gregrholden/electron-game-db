@@ -109,6 +109,18 @@ app.whenReady().then(() => {
     await insertTag(tagName)
   })
 
+  //////// HANDLE GAME DELETION ////////
+  ipcMain.on('deleteGame', async (event, gid) => {
+    // Pop-up modal asking for confirmation.
+    let res = await confirmDelete()
+    // If user selects 'Yes', delete game from database.
+    if (res === 0) {
+      await deleteGame(gid)
+      // Refresh game library.
+      mainWindow.webContents.send('remove-game-row', gid)
+    }
+  })
+
   //////// MAIN WINDOW TRIGGER ////////
   // Initialize and create the main window.
   createWindow()
@@ -172,6 +184,16 @@ async function addTag() {
   addTagModal.on('ready-to-show', () => {
     addTagModal.show()
   })
+}
+
+//////// CONFIRM DELETION MODAL ////////
+async function confirmDelete() {
+  let options = {
+    buttons: ['Yes', 'Cancel'],
+    message: 'Are you sure you want to delete this game? (Action cannot be undone!)'
+  }
+  let res = await dialog.showMessageBox(mainWindow, options)
+  return res.response
 }
 
 ///////////////////////////////////
@@ -344,5 +366,12 @@ async function insertTag(tagName) {
   const db = await getDBDriver()
   await db.open()
   await db.exec("INSERT INTO tags (name) VALUES ('" + tagName + "')")
+  await db.close()
+}
+
+async function deleteGame(gid) {
+  const db = await getDBDriver()
+  await db.open()
+  await db.exec("DELETE FROM games WHERE gid = " + gid)
   await db.close()
 }

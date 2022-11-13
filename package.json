@@ -1,0 +1,36 @@
+{
+  "name": "electron-game-db",
+  "version": "1.0.0",
+  "description": "A simple game database GUI built with Electron and SQLite",
+  "main": "main.js",
+  "build": {
+    "appID": "com.electron-game-db",
+    "files": [
+      "app/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ]
+  },
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "install-app-deps",
+    "release": "build"
+  },
+  "repository": "git@github.com:gregrholden/electron-game-db.git",
+  "keywords": [
+    "Electron",
+    "SQLite"
+  ],
+  "author": "Greg Holden",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^20.2.0",
+    "electron-builder": "^23.3.3",
+    "fs": "^0.0.1-security"
+  },
+  "dependencies": {
+    "electron-window-state": "^5.0.3",
+    "sqlite": "^4.1.2",
+    "sqlite3": "^5.1.1"
+  }
+}

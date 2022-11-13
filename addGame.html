@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+    <link href="./styles.css" rel="stylesheet" type="text/css">
+    <title>Add Game</title>
+  </head>
+  <body>
+    <form id="addGame">
+      <h3>Add a Game</h3>
+      <input id="name" class="form-control text-input" placeholder="Game Title" /><br />
+      <input id="developer" class="form-control text-input" placeholder="Game Developer" /><br />
+      <input id="publisher" class="form-control text-input" placeholder="Game Publisher" /><br />
+      <input id="release_date" class="form-control text-input" placeholder="Release Date" /><br />
+      <input id="platform" class="form-control text-input" placeholder="Platform (e.g. Steam, Epic Games, etc.)" /><br />
+      <input type="submit" id="submitGameBtn" value="Submit" />
+    </form>
+    <script src="./addGameRenderer.js" type="text/javascript"></script>
+  </body>
+</html>

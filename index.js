@@ -32,6 +32,7 @@ async function createWindow() {
     x: winState.x,
     y: winState.y,
     show: false,
+    autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -45,14 +46,17 @@ async function createWindow() {
   // Retrieve arrays of existing objects from the database.
   let libs = await getAllFromTable("library")
   let games = await getAllFromTable("games")
-  let tags = await getAllFromTable("tags")
+  // Get existing game_tags for each game and append to each game in array.
+  let games_with_tags = []
+  for (let i = 0; i < games.length; i++) {
+    games_with_tags.push(await getGameTags(games[i]))
+  }
   let views = await getAllFromTable("views")
 
   // Load the index.html file of the app and pass initial data to renderer.
   mainWindow.loadFile(path.join(__dirname, 'index.html'))
     .then(() => { mainWindow.webContents.send('existing-libs', libs) })
-    .then(() => { mainWindow.webContents.send('existing-games', games) })
-    .then(() => { mainWindow.webContents.send('existing-tags', tags) })
+    .then(() => { mainWindow.webContents.send('existing-games', games_with_tags) })
     .then(() => { mainWindow.webContents.send('existing-views', views) })
     .then(() => { mainWindow.show() })
 
@@ -62,13 +66,17 @@ async function createWindow() {
   // Track and manage window state.
   winState.manage(mainWindow)
   // Open Chromium DevTools.
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
 }
 
 // When the app is "ready" then we can add listeners and event handlers to it.
 app.whenReady().then(() => {
+
+  //////// ADD GAME MODAL TRIGGER ////////
   // Modal window to add a new game.
   ipcMain.handle('modal:addGame', addGame)
+
+  //////// INSERT NEW GAME ////////
   // Event handler for when a new game is submitted via the above modal.
   ipcMain.on('submitGame', async (event, gameData) => {
     // Insert new game into database.
@@ -78,12 +86,30 @@ app.whenReady().then(() => {
       let newGameData = await getRowFromId('games', 'gid', gid.lastID)
       // Then update the library on the renderer.
       if (Object.keys(newGameData).length > 0) {
+        // Associate all new games with the 'All' Tag (tid=0).
+        await insertIntoGameTags(gid.lastID, 0)
+        // Associate new game with user-selected Tag.
+        await insertIntoGameTags(gid.lastID, gameData.tag)
+        // Add array of Tag names associated with the new game to the object.
+        newGameData = await getGameTags(newGameData)
         mainWindow.webContents.send('update-games', newGameData)
       } else {
         console.log("Nothing to update!")
       }
     }
   })
+
+  //////// ADD TAG MODAL TRIGGER ////////
+  // Modal window to add a new game.
+  ipcMain.handle('modal:addTag', addTag)
+
+  //////// INSERT NEW TAG ////////
+  // Event handler for when a new tag is submitted via the above modal.
+  ipcMain.on('submitTag', async (event, tagName) => {
+    await insertTag(tagName)
+  })
+
+  //////// MAIN WINDOW TRIGGER ////////
   // Initialize and create the main window.
   createWindow()
   // Handle window initialization on macOS.
@@ -96,6 +122,7 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
 
+//////// ADD GAME MODAL WINDOW ////////
 // Function to handle the "Add Game" button.
 async function addGame() {
   let addGameModal = new BrowserWindow({
@@ -103,6 +130,8 @@ async function addGame() {
     height: 300,
     modal: true,
     parent: mainWindow,
+    autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'assets/renderers/preload.js')
     }
@@ -110,9 +139,38 @@ async function addGame() {
   addGameModal.on('closed', () => {
     addGameModal = null
   })
+  // Retrieve tags to display in addGame modal select dropdown.
+  let tags = await getAllFromTable("tags")
+
   addGameModal.loadFile(path.join(__dirname, 'assets/modals/addGame.html'))
+    .then(() => { addGameModal.webContents.send('existing-tags', tags) })
   addGameModal.on('ready-to-show', () => {
     addGameModal.show()
+  })
+  // addGameModal.webContents.openDevTools()
+}
+
+//////// ADD TAG MODAL WINDOW ////////
+// Function to handle the "Add Tag" button.
+async function addTag() {
+  let addTagModal = new BrowserWindow({
+    width: 600,
+    height: 300,
+    modal: true,
+    parent: mainWindow,
+    autoHideMenuBar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'assets/renderers/preload.js')
+    }
+  })
+  addTagModal.on('closed', () => {
+    addTagModal = null
+  })
+
+  addTagModal.loadFile(path.join(__dirname, 'assets/modals/addTag.html'))
+  addTagModal.on('ready-to-show', () => {
+    addTagModal.show()
   })
 }
 
@@ -140,7 +198,7 @@ async function initDB() {
           "exe_url        Varchar(128)," +
           "developer      TEXT," +
           "publisher      TEXT," +
-          "rating         INT)"
+          "rating         INTEGER)"
         )
   // Create tags schema.
   await db.exec("CREATE TABLE IF NOT EXISTS tags(" +
@@ -149,16 +207,17 @@ async function initDB() {
         )
   // Create associative schema to connect games and tags.
   await db.exec("CREATE TABLE IF NOT EXISTS game_tags(" +
-          "gid            INT," +
-          "tid            INT," +
+          "gtid           INTEGER PRIMARY KEY AUTOINCREMENT," +
+          "gid            INTEGER," +
+          "tid            INTEGER," +
           "FOREIGN KEY(gid) REFERENCES games(gid)," +
           "FOREIGN KEY(tid) REFERENCES tags(tid))"
         )
   // Create views schema.
   await db.exec("CREATE TABLE IF NOT EXISTS views(" +
           "vid            INTEGER   PRIMARY KEY AUTOINCREMENT," +
-          "lid            INT," +
-          "tid            INT," +
+          "lid            INTEGER," +
+          "tid            INTEGER," +
           "name           TEXT UNIQUE NOT NULL," +
           "FOREIGN KEY(lid) REFERENCES library(lid)," +
           "FOREIGN KEY(tid) REFERENCES tags(tid))"
@@ -180,7 +239,7 @@ async function initDB() {
   await db.close()
 }
 
-/////////////  SELECT * FROM `table`  /////////////
+////////  SELECT * FROM `table`  ////////
 // Using SELECT statement, return all values from specified table.
 async function getAllFromTable(table) {
   const db = await getDBDriver()
@@ -200,7 +259,7 @@ async function getAllFromTable(table) {
   return result
 }
 
-////////////////  INSERT INTO games () VALUES ()  ////////////////
+////////  INSERT INTO games () VALUES ()  ///////
 // Insert new game into database.
 async function insertGame(gameData) {
   const db = await getDBDriver()
@@ -219,9 +278,7 @@ async function insertGame(gameData) {
         // Get the primary key ID of this inserted row.
         function () { return this.lastID }
       )
-  await stmt.finalize(() => {
-
-  })
+  await stmt.finalize()
   await db.close()
   return id
 }
@@ -241,4 +298,51 @@ async function getRowFromId(table, idName, id) {
   })
   await db.close()
   return result
+}
+
+//////// INSERT INTO game_tags (gid,tid) VALUES (`gid`,`tid`) ////////
+// Associate newly added game with 'All' Tag.
+async function insertIntoGameTags(gid, tid) {
+  const db = await getDBDriver()
+  await db.open()
+  const stmt = await db.prepare("INSERT INTO game_tags (gid,tid) VALUES (?,?)")
+  await stmt.run([gid, tid])
+  await stmt.finalize()
+  await db.close()
+}
+
+//////// SELECT t.name FROM tags t
+////////  JOIN game_tags gt
+////////  ON t.tid = gt.tid
+////////  WHERE gt.gid = `gameObj.gid`
+// Retrieve game_tag names and append them to game object.
+async function getGameTags(gameObj) {
+  const db = await getDBDriver()
+  await db.open()
+  const query = "SELECT t.name FROM tags t " +
+                  "JOIN game_tags gt " +
+                  "ON t.tid = gt.tid " +
+                  "WHERE gt.gid = '" + gameObj.gid + "'"
+
+  const tagArr = await db.all(query, (err, rows) => {
+                                if (err) console.error(err)
+                                return rows
+                              })
+  let tagNames = []
+  // Remove object wrappers and place name values in flat array.
+  for (let i = 0; i < tagArr.length; i++) {
+    tagNames.push(tagArr[i].name)
+  }
+  gameObj.Tags = tagNames
+  db.close()
+  return gameObj
+}
+
+//////// INSERT NEW TAG ////////
+// Insert a new tag into the database.
+async function insertTag(tagName) {
+  const db = await getDBDriver()
+  await db.open()
+  await db.exec("INSERT INTO tags (name) VALUES ('" + tagName + "')")
+  await db.close()
 }

@@ -41,6 +41,11 @@ window.libraryAPI.handleExistingGames((event, games) => {
     let plat = document.createElement('td')
     plat.innerHTML = games[g].platform
     tr2.appendChild(plat)
+    // Tags.
+    console.log(games[g].Tags)
+    let tags = document.createElement('td')
+    tags.innerHTML = games[g].Tags.slice(1)
+    tr2.appendChild(tags)
   }
   // Append the dynamic table from above to our gameTable div on index.html.
   libTable.appendChild(emptyTable)
@@ -84,8 +89,21 @@ window.libraryAPI.handleUpdateGames((event, game) => {
     let platCell = row.insertCell(4)
     let platText = document.createTextNode(game.platform)
     platCell.appendChild(platText)
+    // Tags.
+    let tagCell = row.insertCell(5)
+    let tagText = document.createTextNode(game.Tags.slice(1))
+    tagCell.appendChild(tagText)
   } else {
     // Should never reach here as the table is always created at app init.
     console.log("Cannot add game: 'gameLib' table does not yet exist!")
   }
+})
+
+///////////////////////////////////
+///// HANDLE ADD TAG BUTTON //////
+///////////////////////////////////
+const addTagBtn = document.getElementById('addTagBtn')
+// Open a modal with the form to submit a new game.
+addTagBtn.addEventListener('click', async () => {
+  await window.libraryAPI.handleAddTagBtn()
 })

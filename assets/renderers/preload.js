@@ -7,5 +7,7 @@ contextBridge.exposeInMainWorld('libraryAPI', {
   handleExistingLibs:  (callback) => ipcRenderer.on('existing-libs',  callback),
   handleExistingViews: (callback) => ipcRenderer.on('existing-views', callback),
   handleAddGameBtn:    ()         => ipcRenderer.invoke('modal:addGame'),
-  handleSubmitGameBtn: (gameData) => ipcRenderer.send('submitGame', gameData)
+  handleSubmitGameBtn: (gameData) => ipcRenderer.send('submitGame', gameData),
+  handleAddTagBtn: () => ipcRenderer.invoke('modal:addTag'),
+  handleSubmitTagBtn: (tagData) => ipcRenderer.send('submitTag', tagData)
 });

@@ -369,6 +369,8 @@ async function insertTag(tagName) {
   await db.close()
 }
 
+//////// DELETE GAME FROM DATABASE ////////
+// Delete game by gid.
 async function deleteGame(gid) {
   const db = await getDBDriver()
   await db.open()

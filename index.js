@@ -121,6 +121,28 @@ app.whenReady().then(() => {
     }
   })
 
+  ipcMain.on('console', async (event, message) => {
+    console.log(message)
+  })
+
+  //////// HANDLE GAME EDITING FUNCTIONALITY ////////
+  ipcMain.on('modal:editGame', async (event, gid) => {
+    // Get game data.
+    let game = await getGame(gid)
+    game.genre = await getTagIDs(gid)
+    // Swap tag name with tag id.
+    await editGame(game)
+  })
+
+  //////// HANDLE GAME EDIT SUBMIT BUTTON ////////
+  ipcMain.on('submit-edits', async (event, gameData) => {
+      await updateGame(gameData)
+      await updateGameTag(gameData)
+      // Convert tag ID to tag name in gameData object.
+      gameData['genre'] = await getTagById(gameData['genre'])
+      await mainWindow.webContents.send('update-game-row', gameData)
+  })
+
   //////// MAIN WINDOW TRIGGER ////////
   // Initialize and create the main window.
   createWindow()
@@ -186,6 +208,36 @@ async function addTag() {
   })
 }
 
+//////// EDIT GAME MODAL WINDOW ////////
+// Function to handle the "Edit" button.
+async function editGame(gameData) {
+  let editGameModal = new BrowserWindow({
+    width: 600,
+    height: 300,
+    modal: true,
+    parent: mainWindow,
+    autoHideMenuBar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'assets/renderers/preload.js')
+    }
+  })
+
+  editGameModal.on('closed', () => {
+    editGameModal = null
+  })
+
+  let tags = await getAllFromTable("tags")
+  editGameModal.loadFile(await path.join(__dirname, 'assets/modals/editGame.html'))
+    .then(() => { editGameModal.webContents.send('existing-tags', tags) })
+    .then(() => { editGameModal.webContents.send('edit-game-data', gameData) })
+
+  editGameModal.on('ready-to-show', async () => {
+    await editGameModal.show()
+  })
+  // editGameModal.webContents.openDevTools()
+}
+
 //////// CONFIRM DELETION MODAL ////////
 async function confirmDelete() {
   let options = {
@@ -200,49 +252,48 @@ async function confirmDelete() {
 /////// DATABASE OPERATIONS ///////
 ///////////////////////////////////
 
-// Initialize SQLite3 database with default schema and values.
+//////// INITIALIZE DATABASE WITH DEFAULT SCHEMA AND VALUES ////////
 async function initDB() {
   const db = await getDBDriver()
   // Open database connection
   await db.open()
   // Create library schema.
-  await db.exec("CREATE TABLE IF NOT EXISTS library(" +
-          "lid            INTEGER   PRIMARY KEY AUTOINCREMENT," +
-          "name           TEXT  NOT NULL)"
+  await db.exec(`CREATE TABLE IF NOT EXISTS library(
+                  lid            INTEGER   PRIMARY KEY AUTOINCREMENT,
+                  name           TEXT  NOT NULL)`
         )
   // Create games schema.
-  await db.exec("CREATE TABLE IF NOT EXISTS games(" +
-          "gid            INTEGER   PRIMARY KEY AUTOINCREMENT," +
-          "name           TEXT  NOT NULL," +
-          "image_url      Varchar(128)," +
-          "release_date   Date," +
-          "platform       TEXT," +
-          "exe_url        Varchar(128)," +
-          "developer      TEXT," +
-          "publisher      TEXT," +
-          "rating         INTEGER)"
+  await db.exec(`CREATE TABLE IF NOT EXISTS games(
+                  gid            INTEGER   PRIMARY KEY AUTOINCREMENT,
+                  name           TEXT  NOT NULL,
+                  image_url      Varchar(128),
+                  release_date   TEXT,
+                  platform       TEXT,
+                  exe_url        Varchar(128),
+                  developer      TEXT,
+                  publisher      TEXT,
+                  rating         INTEGER)`
         )
   // Create tags schema.
-  await db.exec("CREATE TABLE IF NOT EXISTS tags(" +
-          "tid            INTEGER   PRIMARY KEY AUTOINCREMENT," +
-          "name           TEXT  UNIQUE NOT NULL)"
+  await db.exec(`CREATE TABLE IF NOT EXISTS tags(
+                  tid            INTEGER   PRIMARY KEY AUTOINCREMENT,
+                  name           TEXT  UNIQUE NOT NULL)`
         )
   // Create associative schema to connect games and tags.
-  await db.exec("CREATE TABLE IF NOT EXISTS game_tags(" +
-          "gtid           INTEGER PRIMARY KEY AUTOINCREMENT," +
-          "gid            INTEGER," +
-          "tid            INTEGER," +
-          "FOREIGN KEY(gid) REFERENCES games(gid)," +
-          "FOREIGN KEY(tid) REFERENCES tags(tid))"
+  await db.exec(`CREATE TABLE IF NOT EXISTS game_tags(
+                  gid            INTEGER,
+                  tid            INTEGER,
+                  FOREIGN KEY(gid) REFERENCES games(gid),
+                  FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
   // Create views schema.
-  await db.exec("CREATE TABLE IF NOT EXISTS views(" +
-          "vid            INTEGER   PRIMARY KEY AUTOINCREMENT," +
-          "lid            INTEGER," +
-          "tid            INTEGER," +
-          "name           TEXT UNIQUE NOT NULL," +
-          "FOREIGN KEY(lid) REFERENCES library(lid)," +
-          "FOREIGN KEY(tid) REFERENCES tags(tid))"
+  await db.exec(`CREATE TABLE IF NOT EXISTS views(
+                  vid            INTEGER   PRIMARY KEY AUTOINCREMENT,
+                  lid            INTEGER,
+                  tid            INTEGER,
+                  name           TEXT UNIQUE NOT NULL,
+                  FOREIGN KEY(lid) REFERENCES library(lid),
+                  FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
   // Add default library.
   await db.run("INSERT OR IGNORE INTO library (lid,name) VALUES (1,'Default')")
@@ -261,13 +312,12 @@ async function initDB() {
   await db.close()
 }
 
-////////  SELECT * FROM `table`  ////////
-// Using SELECT statement, return all values from specified table.
+////////  RETRIEVE ALL ROW VALUES FROM SPECIFIED TABLE  ////////
 async function getAllFromTable(table) {
   const db = await getDBDriver()
   let result = []
   // Our composed query.
-  query = "SELECT * FROM " + table;
+  query = `SELECT * FROM ${table}`;
   // Open DB connection.
   await db.open()
   // Assign results of our query to our result variable (or display error).
@@ -281,15 +331,26 @@ async function getAllFromTable(table) {
   return result
 }
 
-////////  INSERT INTO games () VALUES ()  ///////
-// Insert new game into database.
+//////// RETRIEVE GAME USING `gid` ////////
+async function getGame(gid) {
+  const db = await getDBDriver()
+  await db.open()
+  const game = await db.get(`SELECT * FROM games WHERE gid = '${gid}'`, (err, row) => {
+    if (err) console.error(err)
+    return row
+  })
+  await db.close()
+  return game
+}
+
+////////  INSERT GAME INTO DATABASE ////////
 async function insertGame(gameData) {
   const db = await getDBDriver()
   await db.open()
   const stmt = await db.prepare(
-          "INSERT INTO games (name,developer,publisher,release_date,platform)" +
-          " VALUES (?,?,?,?,?)"
-        )
+            `INSERT INTO games (name,developer,publisher,release_date,platform)
+              VALUES (?,?,?,?,?)`
+            )
   let id = await stmt.run([
           gameData.name,
           gameData.developer,
@@ -305,13 +366,12 @@ async function insertGame(gameData) {
   return id
 }
 
-//////// SELECT * FROM `table` WHERE `idName` = '`id`' ////////
-// Retrieve specified table row from provided primary key ID.
+//////// RETRIEVE ROW FROM ID NAME/VALUE ////////
 async function getRowFromId(table, idName, id) {
   let result = {}
   const db = await getDBDriver()
   // Compose query.
-  query = "SELECT * FROM " + table + " WHERE " + idName + " = '" + id + "'"
+  query = `SELECT * FROM ${table} WHERE ${idName} = '${id}'`
   await db.open()
   // Retrieve object from database.
   result = await db.get(query, [], (err, row) => {
@@ -322,8 +382,7 @@ async function getRowFromId(table, idName, id) {
   return result
 }
 
-//////// INSERT INTO game_tags (gid,tid) VALUES (`gid`,`tid`) ////////
-// Associate newly added game with 'All' Tag.
+//////// INSERT INTO `game_tags` TABLE ////////
 async function insertIntoGameTags(gid, tid) {
   const db = await getDBDriver()
   await db.open()
@@ -333,18 +392,15 @@ async function insertIntoGameTags(gid, tid) {
   await db.close()
 }
 
-//////// SELECT t.name FROM tags t
-////////  JOIN game_tags gt
-////////  ON t.tid = gt.tid
-////////  WHERE gt.gid = `gameObj.gid`
-// Retrieve game_tag names and append them to game object.
+/////// RETRIEVE GAME TAGS AND APPEND THEM TO GAME OBJECT ///////
 async function getGameTags(gameObj) {
   const db = await getDBDriver()
   await db.open()
-  const query = "SELECT t.name FROM tags t " +
-                  "JOIN game_tags gt " +
-                  "ON t.tid = gt.tid " +
-                  "WHERE gt.gid = '" + gameObj.gid + "'"
+  const query = `SELECT t.name
+                  FROM tags t
+                  JOIN game_tags gt
+                  ON t.tid = gt.tid
+                  WHERE gt.gid = '${gameObj.gid}'`
 
   const tagArr = await db.all(query, (err, rows) => {
                                 if (err) console.error(err)
@@ -361,19 +417,72 @@ async function getGameTags(gameObj) {
 }
 
 //////// INSERT NEW TAG ////////
-// Insert a new tag into the database.
 async function insertTag(tagName) {
   const db = await getDBDriver()
   await db.open()
-  await db.exec("INSERT INTO tags (name) VALUES ('" + tagName + "')")
+  await db.exec(`INSERT INTO tags (name) VALUES ('${tagName}')`)
   await db.close()
 }
 
+//////// GET TAG ID BY NAME ////////
+async function getTagIDs(gid) {
+  const db = await getDBDriver()
+  await db.open()
+  let result = await db.get(`SELECT tid FROM game_tags
+                             WHERE gid = '${gid}' AND tid != 0`,
+      (err, row) => {
+        if (err) console.error(err)
+        return row
+      })
+  await db.close()
+  return result
+}
+
 //////// DELETE GAME FROM DATABASE ////////
-// Delete game by gid.
 async function deleteGame(gid) {
   const db = await getDBDriver()
   await db.open()
-  await db.exec("DELETE FROM games WHERE gid = " + gid)
+  await db.exec(`DELETE FROM games WHERE gid = ${gid}`)
   await db.close()
+}
+
+//////// UPDATE GAME VALUES ////////
+async function updateGame(gameData) {
+  const db = await getDBDriver()
+  await db.open()
+  let query = `UPDATE games SET name='${gameData['name']}',
+                        developer='${gameData['developer']}',
+                        publisher='${gameData['publisher']}',
+                        release_date='${gameData['release_date']}',
+                        platform='${gameData['platform']}'
+                        WHERE gid = ${gameData['gid']}`
+  await db.exec(query, (cb) => {
+    console.error(cb)
+  })
+  await db.close()
+}
+
+//////// UPDATE GAME TAG ////////
+async function updateGameTag(gameData) {
+  const db = await getDBDriver()
+  await db.open()
+  // Return game_tag row by gid where tid is not 0 (i.e. not 'All').
+  let query = `UPDATE game_tags SET tid = '${gameData['genre']}'
+               WHERE gid = '${gameData['gid']}' AND tid != 0`
+  await db.exec(query, (cb) => {
+    console.error(cb)
+  })
+  await db.close()
+}
+
+//////// GET TAG NAME BY TAG ID ////////
+async function getTagById(tid) {
+  const db = await getDBDriver()
+  await db.open()
+  let tagName = await db.get(`SELECT name FROM tags WHERE tid = ${tid} AND tid != 0`, (err, row) => {
+    if (err) console.error(err)
+    return row
+  })
+  await db.close()
+  return tagName
 }

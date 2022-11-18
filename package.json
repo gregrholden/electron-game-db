@@ -12,7 +12,7 @@
     ]
   },
   "scripts": {
-    "start": "electron .",
+    "start": "electron . --trace-warnings",
     "postinstall": "install-app-deps",
     "release": "build"
   },

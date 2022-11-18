@@ -3,7 +3,7 @@
 ///////////////////////////////////
 const libTable = document.getElementById('gameTable')
 let tableHeaders = new Array()
-tableHeaders = ['Game','Developer','Publisher','Release Date','Platform','Tags', 'Delete?']
+tableHeaders = ['Game','Developer','Publisher','Release Date','Platform','Tags', ' ',' ']
 // Invoke the exposed libraryAPI.
 window.libraryAPI.handleExistingGames((event, games) => {
   // Initialize new table and its headers.
@@ -33,9 +33,9 @@ addGameBtn.addEventListener('click', async () => {
   await window.libraryAPI.handleAddGameBtn()
 })
 
-/////////////////////////////////////
-///// HANDLE ADD GAME OPERATION /////
-/////////////////////////////////////
+////////////////////////////////////////////////
+///// HANDLE UPDATE GAME LIBRARY OPERATION /////
+////////////////////////////////////////////////
 window.libraryAPI.handleUpdateGames((event, game) => {
   if (document.getElementById('gameLib') !== null) {
     let gameLib = document.getElementById('gameLib')
@@ -43,7 +43,7 @@ window.libraryAPI.handleUpdateGames((event, game) => {
     gameLib.appendChild(createGameRow(game))
   } else {
     // Should never reach here as the table is always created at app init.
-    console.log("Cannot add game: 'gameLib' table does not yet exist!")
+    console.error("Cannot add game: HTML table does not exist!")
   }
 })
 
@@ -60,9 +60,21 @@ addTagBtn.addEventListener('click', async () => {
 ///// HANDLE REMOVE ROW AFTER DELETION ///////
 //////////////////////////////////////////////
 window.libraryAPI.handleRemoveGameRow((event, gid) => {
+  // Table rows use `gid` in row ID for easy identification.
   document.getElementById('row-id-' + gid).remove()
 })
 
+///////////////////////////////////////////////
+///// HANDLE UPDATE GAME ROW AFTER EDIT ///////
+///////////////////////////////////////////////
+window.libraryAPI.handleUpdateGameRow((event, gameData) => {
+  document.getElementById(`name-${gameData['gid']}`).innerText = gameData['name']
+  document.getElementById(`developer-${gameData['gid']}`).innerText = gameData['developer']
+  document.getElementById(`publisher-${gameData['gid']}`).innerText = gameData['publisher']
+  document.getElementById(`release_date-${gameData['gid']}`).innerText = gameData['release_date']
+  document.getElementById(`platform-${gameData['gid']}`).innerText = gameData['platform']
+  document.getElementById(`genre-${gameData['gid']}`).innerText = gameData['genre'].name
+})
 
 //////////////////////////////
 ///// CREATE TABLE ROW ///////
@@ -70,36 +82,53 @@ window.libraryAPI.handleRemoveGameRow((event, gid) => {
 function createGameRow(game) {
   // Append new row to the game library table.
   let row = document.createElement("tr")
-  row.setAttribute('id', 'row-id-' + game.gid)
+  // Assign `gid` to row ID to easily identify row for update/delete operations.
+  row.setAttribute('id', `row-id-${game['gid']}`)
   // Game.
   let nameCell = row.insertCell(0)
-  let nameText = document.createTextNode(game.name)
+  nameCell.setAttribute('id', `name-${game['gid']}`)
+  let nameText = document.createTextNode(game['name'])
   nameCell.appendChild(nameText)
   // Developer.
   let devCell = row.insertCell(1)
-  let devText = document.createTextNode(game.developer)
+  devCell.setAttribute('id', `developer-${game['gid']}`)
+  let devText = document.createTextNode(game['developer'])
   devCell.appendChild(devText)
   // Publisher.
   let pubCell = row.insertCell(2)
-  let pubText = document.createTextNode(game.publisher)
+  pubCell.setAttribute('id', `publisher-${game['gid']}`)
+  let pubText = document.createTextNode(game['publisher'])
   pubCell.appendChild(pubText)
   // Release Date.
   let relCell = row.insertCell(3)
-  let relText = document.createTextNode(game.release_date)
+  relCell.setAttribute('id', `release_date-${game['gid']}`)
+  let relText = document.createTextNode(game['release_date'])
   relCell.appendChild(relText)
   // Platform.
   let platCell = row.insertCell(4)
-  let platText = document.createTextNode(game.platform)
+  platCell.setAttribute('id', `platform-${game['gid']}`)
+  let platText = document.createTextNode(game['platform'])
   platCell.appendChild(platText)
   // Tags.
   let tagCell = row.insertCell(5)
-  let tagText = document.createTextNode(game.Tags.slice(1))
+  tagCell.setAttribute('id', `genre-${game['gid']}`)
+  let tagText = document.createTextNode(game['Tags'].slice(1))
   tagCell.appendChild(tagText)
+  // Edit Button.
+  let editCell = row.insertCell(6)
+  let editBtn = document.createElement("button")
+  editBtn.setAttribute('id', game['gid'])
+  editBtn.setAttribute('class', 'editBtn')
+  editBtn.innerText = "Edit"
+  editCell.appendChild(editBtn)
+  editBtn.addEventListener('click', async (event) => {
+    await window.libraryAPI.handleEditGameBtn(event.target.id)
+  })
   // Delete Button.
-  let delCell = row.insertCell(6)
+  let delCell = row.insertCell(7)
   let delBtn = document.createElement("button")
   // Give delete button the ID the game targeted for deletion.
-  delBtn.setAttribute('id', game.gid)
+  delBtn.setAttribute('id', game['gid'])
   delBtn.setAttribute('class', 'deleteBtn')
   delBtn.innerText = "Delete"
   delCell.appendChild(delBtn)

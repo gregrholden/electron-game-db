@@ -58,7 +58,6 @@ async function createWindow() {
     .then(() => { mainWindow.webContents.send('existing-libs', libs) })
     .then(() => { mainWindow.webContents.send('existing-games', games_with_tags) })
     .then(() => { mainWindow.webContents.send('existing-views', views) })
-    .then(() => { mainWindow.show() })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -451,11 +450,11 @@ async function updateGame(gameData) {
   const db = await getDBDriver()
   await db.open()
   let query = `UPDATE games SET name='${gameData['name']}',
-                        developer='${gameData['developer']}',
-                        publisher='${gameData['publisher']}',
-                        release_date='${gameData['release_date']}',
-                        platform='${gameData['platform']}'
-                        WHERE gid = ${gameData['gid']}`
+                      developer='${gameData['developer']}',
+                      publisher='${gameData['publisher']}',
+                      release_date='${gameData['release_date']}',
+                      platform='${gameData['platform']}'
+                      WHERE gid = ${gameData['gid']}`
   await db.exec(query, (cb) => {
     console.error(cb)
   })

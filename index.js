@@ -5,6 +5,7 @@ const sqlite3 = require('sqlite3').verbose()
 const { open } = require('sqlite')
 const path = require('path')
 const DATABASE = './assets/gameDB.sqlite';
+
 // Prevent garbage collection on mainWindow.
 let mainWindow
 
@@ -51,13 +52,13 @@ async function createWindow() {
   for (let i = 0; i < games.length; i++) {
     games_with_tags.push(await getGameTags(games[i]))
   }
-  let views = await getAllFromTable("views")
+  let filters = await getAllFromTable("filters")
 
   // Load the index.html file of the app and pass initial data to renderer.
   mainWindow.loadFile(path.join(__dirname, 'index.html'))
     .then(() => { mainWindow.webContents.send('existing-libs', libs) })
     .then(() => { mainWindow.webContents.send('existing-games', games_with_tags) })
-    .then(() => { mainWindow.webContents.send('existing-views', views) })
+    .then(() => { mainWindow.webContents.send('existing-filters', filters) })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -71,11 +72,11 @@ async function createWindow() {
 // When the app is "ready" then we can add listeners and event handlers to it.
 app.whenReady().then(() => {
 
-  //////// ADD GAME MODAL TRIGGER ////////
+  //////// ADD-GAME MODAL TRIGGER ////////
   // Modal window to add a new game.
   ipcMain.handle('modal:addGame', addGame)
 
-  //////// INSERT NEW GAME ////////
+  //////// HANDLER FOR INSERT OF NEW GAME ////////
   // Event handler for when a new game is submitted via the above modal.
   ipcMain.on('submitGame', async (event, gameData) => {
     // Insert new game into database.
@@ -98,11 +99,11 @@ app.whenReady().then(() => {
     }
   })
 
-  //////// ADD TAG MODAL TRIGGER ////////
+  //////// ADD-TAG MODAL TRIGGER ////////
   // Modal window to add a new game.
   ipcMain.handle('modal:addTag', addTag)
 
-  //////// INSERT NEW TAG ////////
+  //////// HANDLER FOR INSERT OF NEW TAG ////////
   // Event handler for when a new tag is submitted via the above modal.
   ipcMain.on('submitTag', async (event, tagName) => {
     await insertTag(tagName)
@@ -120,6 +121,8 @@ app.whenReady().then(() => {
     }
   })
 
+  // Function for displaying renderer data on backend console.
+  // Used for debugging.
   ipcMain.on('console', async (event, message) => {
     console.log(message)
   })
@@ -285,9 +288,9 @@ async function initDB() {
                   FOREIGN KEY(gid) REFERENCES games(gid),
                   FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
-  // Create views schema.
-  await db.exec(`CREATE TABLE IF NOT EXISTS views(
-                  vid            INTEGER   PRIMARY KEY AUTOINCREMENT,
+  // Create filters schema.
+  await db.exec(`CREATE TABLE IF NOT EXISTS filters(
+                  fid            INTEGER   PRIMARY KEY AUTOINCREMENT,
                   lid            INTEGER,
                   tid            INTEGER,
                   name           TEXT UNIQUE NOT NULL,
@@ -306,7 +309,7 @@ async function initDB() {
   }
   await stmt.finalize()
   // Add default view.
-  await db.run("INSERT OR IGNORE INTO views (vid,lid,tid,name) VALUES (1,1,0,'Default')")
+  await db.run("INSERT OR IGNORE INTO filters (fid,lid,tid,name) VALUES (1,1,0,'Default')")
   // Close database connection.
   await db.close()
 }

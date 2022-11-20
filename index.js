@@ -469,15 +469,21 @@ async function deleteGame(gid) {
 async function updateGame(gameData) {
   const db = await getDBDriver()
   await db.open()
-  let query = `UPDATE games SET name='${gameData['name']}',
-                      developer='${gameData['developer']}',
-                      publisher='${gameData['publisher']}',
-                      release_date='${gameData['release_date']}',
-                      platform='${gameData['platform']}'
-                      WHERE gid = ${gameData['gid']}`
-  await db.exec(query, (cb) => {
-    console.error(cb)
-  })
+  bindValues = [gameData['name'],
+                gameData['developer'],
+                gameData['publisher'],
+                gameData['release_date'],
+                gameData['platform'],
+                gameData['gid']]
+  const stmt = await db.prepare("UPDATE games SET name=?, " +
+                                "developer=?, " +
+                                "publisher=?, " +
+                                "release_date=?, " +
+                                "platform=? " +
+                                "WHERE gid = ?")
+  await stmt.bind(bindValues)
+  await stmt.run()
+  await stmt.finalize()
   await db.close()
 }
 

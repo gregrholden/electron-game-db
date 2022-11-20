@@ -87,9 +87,9 @@ app.whenReady().then(() => {
       // Then update the library on the renderer.
       if (Object.keys(newGameData).length > 0) {
         // Associate all new games with the 'All' Tag (tid=0).
-        await insertIntoGameTags(gid.lastID, 0)
+        await insertIntoGameTags(null, gid.lastID, 0)
         // Associate new game with user-selected Tag.
-        await insertIntoGameTags(gid.lastID, gameData.tag)
+        await insertIntoGameTags(null, gid.lastID, gameData.tag)
         // Add array of Tag names associated with the new game to the object.
         newGameData = await getGameTags(newGameData)
         mainWindow.webContents.send('update-games', newGameData)
@@ -147,7 +147,28 @@ app.whenReady().then(() => {
 
   //////// HANDLE FILTER DROPDOWN CHANGE ////////
   ipcMain.on('change-filter', async (event, fid) => {
-
+    // console.log("INPUT: " + fid)
+    let tids = await getTidsByFids(fid)
+    let gids = []
+    for (let i = 0; i < tids.length; i++) {
+      let objs = await getGidsByTids(tids[i]['tid'])
+      objs.forEach(obj => {
+        Object.values(obj).forEach(val => {
+          gids.push(val)
+        })
+      })
+    }
+    let games = []
+    for (let j = 0; j < gids.length; j++) {
+      games.push(await getGame(gids[j]))
+    }
+    // let games = await getAllFromTableByIds("games", "gid", gids)
+    // Get existing game_tags for each game and append to each game in array.
+    let games_with_tags = []
+    for (let i = 0; i < games.length; i++) {
+      games_with_tags.push(await getGameTags(games[i]))
+    }
+    await mainWindow.webContents.send('library-refresh', games_with_tags)
   })
 
   //////// MAIN WINDOW TRIGGER ////////
@@ -264,6 +285,11 @@ async function initDB() {
   const db = await getDBDriver()
   // Open database connection
   await db.open()
+
+  ///////////////////////////////
+  /////// DATABASE SCHEMA ///////
+  ///////////////////////////////
+
   // Create library schema.
   await db.exec(`CREATE TABLE IF NOT EXISTS library(
                   lid            INTEGER   PRIMARY KEY AUTOINCREMENT,
@@ -285,6 +311,7 @@ async function initDB() {
         )
   // Create associative schema to connect games and tags.
   await db.exec(`CREATE TABLE IF NOT EXISTS game_tags(
+                  gtid           INTEGER   PRIMARY KEY AUTOINCREMENT,
                   gid            INTEGER,
                   tid            INTEGER,
                   FOREIGN KEY(gid) REFERENCES games(gid),
@@ -297,36 +324,72 @@ async function initDB() {
         )
   // Create associative schema to connect filters and tags.
   await db.exec(`CREATE TABLE IF NOT EXISTS filter_tags(
+                  ftid           INTEGER   PRIMARY KEY AUTOINCREMENT,
                   fid            INTEGER,
                   tid            INTEGER,
                   FOREIGN KEY(fid) REFERENCES filters(fid),
                   FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
-  // Add default library.
+
+  //////////////////////////////////////
+  ////////// INSERT TEST DATA //////////
+  //////////////////////////////////////
+
+  // LIBRARY.
   await db.run("INSERT OR IGNORE INTO library (lid,name) VALUES (1,'Default')")
-  // Add selection of standard tags.
+
+  // TAGS.
   const cats = ['All', 'Action', 'Adventure', 'Casual', 'FPS', 'Indie',
-                'RPG', 'Simulation', 'Sports', 'Stealth', 'Strategy',
-                'Survival'];
+    'RPG', 'Simulation', 'Sports', 'Stealth', 'Strategy',
+    'Survival'];
   const stmt = await db.prepare("INSERT OR IGNORE INTO tags (tid,name) VALUES (?,?)")
   for (let i = 0; i < cats.length; i++) {
     await stmt.run(i, cats[i])
   }
   await stmt.finalize()
-  // Add a few default filters.
+
+  // GAMES.
+  const gameStmt = await db.prepare("INSERT OR IGNORE INTO games (gid,name,release_date,platform,developer,publisher)" +
+                "VALUES(?,?,?,?,?,?)")
+  const gameArr = [
+    [1,"Tiny Tina's Wonderlands",2022,"Epic","Gearbox","2K Games"],
+    [2,"Total War: Warhammer III",2022,"Steam","Creative Assembly","Sega"],
+    [3,"Vermintide 2",2017,"Steam","Fatshark","Fatshark"],
+    [4,"World War Z",2019,"Epic","Saber Interactive","Saber Interactive"],
+    [5,"Risk of Rain 2",2019,"Steam","Hopoo Games","Gearbox"],
+    [6,"Settlement Survival",2021,"Steam","Gleamer Studio","Gleamer Studio"],
+    [7,"Ghost Recon Breakpoint",2019,"uPlay","Ubisoft","Ubisoft"],
+    [8,"Raft",2018,"Steam","Redbeet Interactive","Axolot Games"],
+    [9,"Madden NFL 23",2022,"EA","EA Tiburon","Electronic Arts"],
+    [10,"Stardew Valley",2016,"Steam","ConcernedApe","ConcernedApe"]
+  ]
+  for (let i = 0; i < gameArr.length; i++) {
+    await gameStmt.run(gameArr[i])
+    // Associate every game with the 'All' tag.
+    await insertIntoGameTags(i, gameArr[i][0], 0)
+  }
+  await gameStmt.finalize()
+
+  // GAME_TAGS.
+  const tagIDs = [6,9,1,4,4,7,4,11,8,3]
+  for (let i = 0; i < gameArr.length; i++) {
+    await insertIntoGameTags((i + 10), gameArr[i][0], tagIDs[i])
+  }
+
+  // FILTERS.
   await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (1,'All Games')")
   await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (2,'Action Games')")
   await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (3,'First-Person Shooters')")
   await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (4,'Role Playing Games (RPG)')")
   await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (5,'Action and RPGs')")
   // Associate default filters with filter_tags.
-  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (1,0)")
-  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (2,1)")
-  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (3,4)")
-  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (4,6)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (ftid,fid,tid) VALUES (1,1,0)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (ftid,fid,tid) VALUES (2,2,1)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (ftid,fid,tid) VALUES (3,3,4)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (ftid,fid,tid) VALUES (4,4,6)")
   // Two tags for this filter:
-  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (5,1)")
-  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (5,6)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (ftid,fid,tid) VALUES (5,5,1)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (ftid,fid,tid) VALUES (6,5,6)")
   // Close database connection.
   await db.close()
 }
@@ -334,19 +397,31 @@ async function initDB() {
 ////////  RETRIEVE ALL ROW VALUES FROM SPECIFIED TABLE  ////////
 async function getAllFromTable(table) {
   const db = await getDBDriver()
-  let result = []
-  // Our composed query.
-  query = `SELECT * FROM ${table}`;
-  // Open DB connection.
   await db.open()
-  // Assign results of our query to our result variable (or display error).
+  let query = `SELECT * FROM ${table}`;
+  let result = []
   result = await db.all(query, [], (err, rows) => {
     if (err) return console.error(err)
     return rows
   })
-  // Close DB connection.
   await db.close()
-  // Return our resulting array.
+  return result
+}
+
+////////  RETRIEVE ALL ROWS FROM SPECIFIED TABLE BY THAT TABLE'S PK ID  ////////
+async function getAllFromTableByIds(table, idName, idArr) {
+  const db = await getDBDriver()
+  const stmt = db.prepare("SELECT * FROM ? WHERE ? = ?")
+  let result = []
+  for (let i = 0; i < idArr.length; i++) {
+    let gameRow = await stmt.get([table, idName, idArr[i]], function(err, row) {
+      if (err) console.error(err)
+      return row
+    })
+    result.push(gameRow)
+  }
+  await stmt.finalize()
+  await db.close()
   return result
 }
 
@@ -402,12 +477,19 @@ async function getRowFromId(table, idName, id) {
 }
 
 //////// INSERT INTO `game_tags` TABLE ////////
-async function insertIntoGameTags(gid, tid) {
+async function insertIntoGameTags(gtid, gid, tid) {
   const db = await getDBDriver()
   await db.open()
-  const stmt = await db.prepare("INSERT INTO game_tags (gid,tid) VALUES (?,?)")
-  await stmt.run([gid, tid])
-  await stmt.finalize()
+  // Allow auto-increment when `gtid` not present.
+  if (gtid !== null) {
+    const stmt = await db.prepare("INSERT OR REPLACE INTO game_tags (gtid,gid,tid) VALUES (?,?,?)")
+    await stmt.run([gtid, gid, tid])
+    await stmt.finalize()
+  } else {
+    const stmt = await db.prepare("INSERT OR REPLACE INTO game_tags (gid,tid) VALUES (?,?)")
+    await stmt.run([gid, tid])
+    await stmt.finalize()
+  }
   await db.close()
 }
 
@@ -439,7 +521,7 @@ async function getGameTags(gameObj) {
 async function insertTag(tagName) {
   const db = await getDBDriver()
   await db.open()
-  await db.exec(`INSERT INTO tags (name) VALUES ('${tagName}')`)
+  await db.exec(`INSERT OR IGNORE INTO tags (name) VALUES ('${tagName}')`)
   await db.close()
 }
 
@@ -510,4 +592,30 @@ async function getTagById(tid) {
   })
   await db.close()
   return tagName
+}
+
+async function getTidsByFids(fid) {
+  const db = await getDBDriver()
+  await db.open()
+  const stmt = await db.prepare("SELECT tid FROM filter_tags WHERE fid = ?")
+  const results = await stmt.all([fid], (err, rows) => {
+    if (err) console.error(err)
+    return rows
+  })
+  await stmt.finalize()
+  await db.close()
+  return results
+}
+
+async function getGidsByTids(tid) {
+  const db = await getDBDriver()
+  await db.open()
+  const stmt = await db.prepare("SELECT gid FROM game_tags WHERE tid = ?")
+  const results = await stmt.all([tid], (err, rows) => {
+    if (err) console.error(err)
+    return rows
+  })
+  await stmt.finalize()
+  await db.close()
+  return results
 }

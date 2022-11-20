@@ -9,17 +9,24 @@ window.libraryAPI.handleExistingGames((event, games) => {
   // Initialize new table and its headers.
   let emptyTable = document.createElement("table")
   emptyTable.setAttribute('id', 'gameLib')
-  let tr1 = emptyTable.insertRow(-1)
+  let thead = document.createElement('thead')
+  thead.setAttribute('id', 'headers')
+  // emptyTable.appendChild(thead)
+  let tr1 = thead.insertRow(-1)
   // Create table headers.
   for (let h = 0; h < tableHeaders.length; h++) {
     let th = document.createElement('th')
     th.innerHTML = tableHeaders[h]
     tr1.appendChild(th)
   }
+  emptyTable.appendChild(thead)
+  let tbody = document.createElement('tbody')
+  tbody.setAttribute('id', 'rows')
   // Create table rows.
   for (let g = 0; g < games.length; g++) {
-    emptyTable.appendChild(createGameRow(games[g]))
+    tbody.appendChild(createGameRow(games[g]))
   }
+  emptyTable.appendChild(tbody)
   // Append the dynamic table from above to our gameTable div on index.html.
   libTable.appendChild(emptyTable)
 })
@@ -33,9 +40,25 @@ addGameBtn.addEventListener('click', async () => {
   await window.libraryAPI.handleAddGameBtn()
 })
 
+///////////////////////////
+///// REFRESH LIBRARY /////
+///////////////////////////
+window.libraryAPI.handleLibraryRefresh((event, games) => {
+  let oldTBody = document.getElementById("rows")
+  let newTBody = document.createElement("tbody")
+  newTBody.setAttribute("id", "rows")
+  // Create table rows.
+  for (let g = 0; g < games.length; g++) {
+    newTBody.appendChild(createGameRow(games[g]))
+  }
+  oldTBody.parentNode.replaceChild(newTBody, oldTBody)
+})
+
 ////////////////////////////////////////////////
 ///// HANDLE UPDATE GAME LIBRARY OPERATION /////
 ////////////////////////////////////////////////
+// Currenly only used to add a new game, not update full game library.
+// See above libraryRefresh() for a full chain of updates to the library.
 window.libraryAPI.handleUpdateGames((event, game) => {
   if (document.getElementById('gameLib') !== null) {
     let gameLib = document.getElementById('gameLib')
@@ -96,8 +119,9 @@ window.libraryAPI.handleExistingFilters((event, filters) => {
 ////////////////////////////////////////////////
 const filtersDropdown = document.getElementById('filters')
 filtersDropdown.addEventListener('change', async (event) => {
+  await libraryAPI.handleChangeFilter(event.target.value)
   // TODO: Update to handle filter change.
-  await libraryAPI.sendToConsole(event.target.value)
+  // await libraryAPI.sendToConsole(event.target.value)
 })
 
 ///////////////////////////////////////

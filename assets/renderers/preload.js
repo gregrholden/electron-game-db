@@ -17,5 +17,6 @@ contextBridge.exposeInMainWorld('libraryAPI', {
   handleEditGameData:    (gameData) => ipcRenderer.on('edit-game-data', gameData),
   handleSubmitEditsBtn:  (gameData) => ipcRenderer.send('submit-edits', gameData),
   handleUpdateGameRow:   (gameData) => ipcRenderer.on('update-game-row', gameData),
+  handleLibraryRefresh:  (games)    => ipcRenderer.on('library-refresh', games),
   sendToConsole:         (message)  => ipcRenderer.send('console', message)
 })

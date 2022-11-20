@@ -76,9 +76,33 @@ window.libraryAPI.handleUpdateGameRow((event, gameData) => {
   document.getElementById(`genre-${gameData['gid']}`).innerText = gameData['genre'].name
 })
 
-//////////////////////////////
-///// CREATE TABLE ROW ///////
-//////////////////////////////
+/////////////////////////////////////
+///// POPULATE FILTERS DROPDOWN /////
+/////////////////////////////////////
+// Handle Populating Select Dropdown with existing Filters.
+window.libraryAPI.handleExistingFilters((event, filters) => {
+  const filtersOpts = document.getElementById('filters')
+  for (let i = 0; i < filters.length; i++) {
+    let option = document.createElement('option')
+    option.setAttribute('value', filters[i].fid)
+    let optionText = document.createTextNode(filters[i].name)
+    option.appendChild(optionText)
+    filtersOpts.appendChild(option)
+  }
+})
+
+////////////////////////////////////////////////
+///// HANDLE FILTERS DROPDOWN WHEN CHANGED /////
+////////////////////////////////////////////////
+const filtersDropdown = document.getElementById('filters')
+filtersDropdown.addEventListener('change', async (event) => {
+  // TODO: Update to handle filter change.
+  await libraryAPI.sendToConsole(event.target.value)
+})
+
+///////////////////////////////////////
+///// CREATE TABLE ROW FUNCTION ///////
+///////////////////////////////////////
 function createGameRow(game) {
   // Append new row to the game library table.
   let row = document.createElement("tr")

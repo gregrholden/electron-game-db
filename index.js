@@ -145,6 +145,11 @@ app.whenReady().then(() => {
       await mainWindow.webContents.send('update-game-row', gameData)
   })
 
+  //////// HANDLE FILTER DROPDOWN CHANGE ////////
+  ipcMain.on('change-filter', async (event, fid) => {
+
+  })
+
   //////// MAIN WINDOW TRIGGER ////////
   // Initialize and create the main window.
   createWindow()
@@ -268,13 +273,10 @@ async function initDB() {
   await db.exec(`CREATE TABLE IF NOT EXISTS games(
                   gid            INTEGER   PRIMARY KEY AUTOINCREMENT,
                   name           TEXT  NOT NULL,
-                  image_url      Varchar(128),
                   release_date   TEXT,
                   platform       TEXT,
-                  exe_url        Varchar(128),
                   developer      TEXT,
-                  publisher      TEXT,
-                  rating         INTEGER)`
+                  publisher      TEXT)`
         )
   // Create tags schema.
   await db.exec(`CREATE TABLE IF NOT EXISTS tags(
@@ -291,10 +293,13 @@ async function initDB() {
   // Create filters schema.
   await db.exec(`CREATE TABLE IF NOT EXISTS filters(
                   fid            INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  lid            INTEGER,
+                  name           TEXT      UNIQUE NOT NULL)`
+        )
+  // Create associative schema to connect filters and tags.
+  await db.exec(`CREATE TABLE IF NOT EXISTS filter_tags(
+                  fid            INTEGER,
                   tid            INTEGER,
-                  name           TEXT UNIQUE NOT NULL,
-                  FOREIGN KEY(lid) REFERENCES library(lid),
+                  FOREIGN KEY(fid) REFERENCES filters(fid),
                   FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
   // Add default library.
@@ -308,8 +313,20 @@ async function initDB() {
     await stmt.run(i, cats[i])
   }
   await stmt.finalize()
-  // Add default view.
-  await db.run("INSERT OR IGNORE INTO filters (fid,lid,tid,name) VALUES (1,1,0,'Default')")
+  // Add a few default filters.
+  await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (1,'All Games')")
+  await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (2,'Action Games')")
+  await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (3,'First-Person Shooters')")
+  await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (4,'Role Playing Games (RPG)')")
+  await db.run("INSERT OR IGNORE INTO filters (fid,name) VALUES (5,'Action and RPGs')")
+  // Associate default filters with filter_tags.
+  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (1,0)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (2,1)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (3,4)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (4,6)")
+  // Two tags for this filter:
+  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (5,1)")
+  await db.run("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (5,6)")
   // Close database connection.
   await db.close()
 }

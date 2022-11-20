@@ -9,9 +9,6 @@ submitEditsBtn.addEventListener('click', async () => {
   const publisher = document.getElementById('publisher').value
   const release_date = document.getElementById('release_date').value
   const platform = document.getElementById('platform').value
-  const image_url = document.getElementById('image_url').value
-  const exe_url = document.getElementById('exe_url').value
-  const rating = document.getElementById('rating').value
   const genre = document.getElementById('genre').value
   gameData = {
               "gid": gid,
@@ -20,9 +17,6 @@ submitEditsBtn.addEventListener('click', async () => {
               "publisher": publisher,
               "release_date": release_date,
               "platform": platform,
-              "image_url": image_url,
-              "exe_url": exe_url,
-              "rating": rating,
               "genre": genre,
             }
   await window.libraryAPI.handleSubmitEditsBtn(gameData)
@@ -49,8 +43,5 @@ window.libraryAPI.handleEditGameData((event, gameData) => {
   document.getElementById('publisher').value = gameData.publisher
   document.getElementById('release_date').value = gameData.release_date
   document.getElementById('platform').value = gameData.platform
-  document.getElementById('image_url').value = gameData.image_url
-  document.getElementById('exe_url').value = gameData.exe_url
-  document.getElementById('rating').value = gameData.rating
   document.getElementById('genre').value = gameData.genre.tid
 })

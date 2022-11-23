@@ -72,7 +72,7 @@ window.libraryAPI.handleUpdateGames((event, game) => {
 //////////////////////////////////////////
 ///// HANDLE EXISTING LIBRARY NAME ///////
 //////////////////////////////////////////
-// Function serves little purpose other than assigning an ID to the page.
+// Function serves little purpose other than assigning identifiers to the body.
 window.libraryAPI.handleExistingLibs((event, libs) => {
   const pageBody = document.body
   pageBody.setAttribute('id', 'lid-' + libs[0]['lid'])

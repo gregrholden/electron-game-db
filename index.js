@@ -458,23 +458,6 @@ async function getAllFromTable(table) {
   return result
 }
 
-////////  RETRIEVE ALL ROWS FROM SPECIFIED TABLE BY THAT TABLE'S PK ID  ////////
-async function getAllFromTableByIds(table, idName, idArr) {
-  const db = await getDBDriver()
-  const stmt = db.prepare("SELECT * FROM ? WHERE ? = ?")
-  let result = []
-  for (let i = 0; i < idArr.length; i++) {
-    let dataRow = await stmt.get([table, idName, idArr[i]], function(err, row) {
-      if (err) console.error(err)
-      return row
-    })
-    result.push(dataRow)
-  }
-  await stmt.finalize()
-  await db.close()
-  return result
-}
-
 ////////  RETRIEVE GAME USING `gid`  ////////
 async function getGame(gid) {
   const db = await getDBDriver()

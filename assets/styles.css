@@ -18,25 +18,25 @@ body {
 
 table {
   background: #012B39;
-  border-radius: 0.25em;
+  border-radius: 0.25rem;
   border-collapse: collapse;
-  margin: 1em;
+  margin: 1rem;
   width: 97.5%;
 }
 
 th {
   border-bottom: 1px solid #364043;
   color: #E2B842;
-  font-size: 0.85em;
+  font-size: 0.85rem;
   font-weight: 600;
-  padding: 0.5em 1em;
+  padding: 0.5rem 1rem;
   text-align: left;
 }
 
 td {
   color: #fff;
   font-weight: 400;
-  padding: 0.65em 1em;
+  padding: 0.65rem 1rem;
 }
 
 .disabled td {
@@ -89,4 +89,17 @@ button:hover {
 
 button:focus {
   box-shadow: rgba(0, 0, 0, .3) 2px 8px 4px -6px;
+}
+
+#filters {
+  font-size: 1.10rem;
+}
+
+label {
+  color: #fff;
+  font-size: 1.4rem;
+}
+
+#menuOptions {
+  margin: 1rem;
 }

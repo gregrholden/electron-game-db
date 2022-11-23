@@ -11,7 +11,6 @@ window.libraryAPI.handleExistingGames((event, games) => {
   emptyTable.setAttribute('id', 'gameLib')
   let thead = document.createElement('thead')
   thead.setAttribute('id', 'headers')
-  // emptyTable.appendChild(thead)
   let tr1 = thead.insertRow(-1)
   // Create table headers.
   for (let h = 0; h < tableHeaders.length; h++) {
@@ -70,6 +69,16 @@ window.libraryAPI.handleUpdateGames((event, game) => {
   }
 })
 
+//////////////////////////////////////////
+///// HANDLE EXISTING LIBRARY NAME ///////
+//////////////////////////////////////////
+// Function serves little purpose other than assigning an ID to the page.
+window.libraryAPI.handleExistingLibs((event, libs) => {
+  const pageBody = document.body
+  pageBody.setAttribute('id', 'lid-' + libs[0]['lid'])
+  pageBody.setAttribute('name', libs[0]['name'])
+})
+
 ///////////////////////////////////
 ///// HANDLE ADD TAG BUTTON ///////
 ///////////////////////////////////
@@ -114,14 +123,33 @@ window.libraryAPI.handleExistingFilters((event, filters) => {
   }
 })
 
+//////////////////////////////////////////////////
+///// APPEND NEWLY ADDED FILTERS TO DROPDOWN /////
+//////////////////////////////////////////////////
+window.libraryAPI.handleAddFilter((event, filter) => {
+  const filtersOpts = document.getElementById('filters')
+  let option = document.createElement('option')
+  option.setAttribute('value', filter['fid'])
+  let optionText = document.createTextNode(filter['name'])
+  option.appendChild(optionText)
+  filtersOpts.appendChild(option)
+})
+
 ////////////////////////////////////////////////
 ///// HANDLE FILTERS DROPDOWN WHEN CHANGED /////
 ////////////////////////////////////////////////
 const filtersDropdown = document.getElementById('filters')
 filtersDropdown.addEventListener('change', async (event) => {
   await libraryAPI.handleChangeFilter(event.target.value)
-  // TODO: Update to handle filter change.
-  // await libraryAPI.sendToConsole(event.target.value)
+})
+
+//////////////////////////////////////
+///// HANDLE ADD FILTER BUTTON ///////
+//////////////////////////////////////
+const addFilterBtn = document.getElementById('addFilterBtn')
+// Open a modal with the form to submit a new game.
+addFilterBtn.addEventListener('click', async () => {
+  await window.libraryAPI.handleAddFilterBtn()
 })
 
 ///////////////////////////////////////

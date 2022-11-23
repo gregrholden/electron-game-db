@@ -56,9 +56,9 @@ async function createWindow() {
 
   // Load the index.html file of the app and pass initial data to renderer.
   mainWindow.loadFile(path.join(__dirname, 'index.html'))
-    .then(() => { mainWindow.webContents.send('existing-libs', libs) })
     .then(() => { mainWindow.webContents.send('existing-games', games_with_tags) })
     .then(() => { mainWindow.webContents.send('existing-filters', filters) })
+    .then(() => { mainWindow.webContents.send('existing-libs', libs) })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -128,7 +128,7 @@ app.whenReady().then(() => {
   })
 
   //////// HANDLE GAME EDITING FUNCTIONALITY ////////
-  ipcMain.on('modal:editGame', async (event, gid) => {
+  ipcMain.handle('modal:editGame', async (event, gid) => {
     // Get game data.
     let game = await getGame(gid)
     game.genre = await getTagIDs(gid)
@@ -162,13 +162,32 @@ app.whenReady().then(() => {
     for (let j = 0; j < gids.length; j++) {
       games.push(await getGame(gids[j]))
     }
-    // let games = await getAllFromTableByIds("games", "gid", gids)
     // Get existing game_tags for each game and append to each game in array.
     let games_with_tags = []
     for (let i = 0; i < games.length; i++) {
       games_with_tags.push(await getGameTags(games[i]))
     }
     await mainWindow.webContents.send('library-refresh', games_with_tags)
+  })
+
+  //////// HANDLE MODAL CREATION FOR ADDING NEW FILTERS ////////
+  ipcMain.handle('modal:addFilter', addFilter)
+
+  //////// HANDLE FILTER SUBMIT BUTTON ////////
+  ipcMain.on('submit-filter', async (event, filter) => {
+    // Check that input values are not empty.
+    if (filter['name'] !== null && filter['tids'].length > 0) {
+      // Insert new filter and return auto-incremented fid.
+      let fid = await insertFilter(filter['name'])
+      // Associate new filter with relevant Tags.
+      for (let t = 0; t < filter['tids'].length; t++) {
+        // Run INSERT statement on each tag selection from checklist.
+        await insertFilterTag(fid.lastID, filter['tids'][t])
+      }
+      // Update filter dropdown list on mainWindow.
+      let filterOpt = { 'name': filter['name'], 'fid': fid.lastID }
+      await mainWindow.webContents.send('add-filter', filterOpt)
+    }
   })
 
   //////// MAIN WINDOW TRIGGER ////////
@@ -231,6 +250,7 @@ async function addTag() {
   })
 
   addTagModal.loadFile(path.join(__dirname, 'assets/modals/addTag.html'))
+
   addTagModal.on('ready-to-show', () => {
     addTagModal.show()
   })
@@ -266,6 +286,36 @@ async function editGame(gameData) {
   // editGameModal.webContents.openDevTools()
 }
 
+//////// ADD FILTER MODAL WINDOW ////////
+// Function to handle the "Add Filter" button.
+async function addFilter() {
+  let addFilterModal = new BrowserWindow({
+    width: 500,
+    height: 400,
+    modal: true,
+    parent: mainWindow,
+    autoHideMenuBar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'assets/renderers/preload.js')
+    }
+  })
+
+  addFilterModal.on('closed', () => {
+    addFilterModal = null
+  })
+
+  // Retrieve tags to display in addFilter modal checklist.
+  let tags = await getAllFromTable("tags")
+
+  addFilterModal.loadFile(path.join(__dirname, 'assets/modals/addFilter.html'))
+    .then(() => { addFilterModal.webContents.send('existing-tags', tags) })
+
+  addFilterModal.on('ready-to-show', () => {
+    addFilterModal.show()
+  })
+}
+
 //////// CONFIRM DELETION MODAL ////////
 async function confirmDelete() {
   let options = {
@@ -299,7 +349,7 @@ async function initDB() {
   await db.exec(`CREATE TABLE IF NOT EXISTS games(
                   gid            INTEGER   PRIMARY KEY AUTOINCREMENT,
                   name           TEXT  NOT NULL,
-                  release_date   TEXT,
+                  release_date   DATE,
                   platform       TEXT,
                   developer      TEXT,
                   publisher      TEXT)`
@@ -312,8 +362,8 @@ async function initDB() {
   // Create associative schema to connect games and tags.
   await db.exec(`CREATE TABLE IF NOT EXISTS game_tags(
                   gtid           INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  gid            INTEGER,
-                  tid            INTEGER,
+                  gid            INTEGER   NOT NULL,
+                  tid            INTEGER   NOT NULL,
                   FOREIGN KEY(gid) REFERENCES games(gid),
                   FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
@@ -325,8 +375,8 @@ async function initDB() {
   // Create associative schema to connect filters and tags.
   await db.exec(`CREATE TABLE IF NOT EXISTS filter_tags(
                   ftid           INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  fid            INTEGER,
-                  tid            INTEGER,
+                  fid            INTEGER   NOT NULL,
+                  tid            INTEGER   NOT NULL,
                   FOREIGN KEY(fid) REFERENCES filters(fid),
                   FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
@@ -414,18 +464,18 @@ async function getAllFromTableByIds(table, idName, idArr) {
   const stmt = db.prepare("SELECT * FROM ? WHERE ? = ?")
   let result = []
   for (let i = 0; i < idArr.length; i++) {
-    let gameRow = await stmt.get([table, idName, idArr[i]], function(err, row) {
+    let dataRow = await stmt.get([table, idName, idArr[i]], function(err, row) {
       if (err) console.error(err)
       return row
     })
-    result.push(gameRow)
+    result.push(dataRow)
   }
   await stmt.finalize()
   await db.close()
   return result
 }
 
-//////// RETRIEVE GAME USING `gid` ////////
+////////  RETRIEVE GAME USING `gid`  ////////
 async function getGame(gid) {
   const db = await getDBDriver()
   await db.open()
@@ -437,7 +487,7 @@ async function getGame(gid) {
   return game
 }
 
-////////  INSERT GAME INTO DATABASE ////////
+////////  INSERT GAME INTO DATABASE  ////////
 async function insertGame(gameData) {
   const db = await getDBDriver()
   await db.open()
@@ -460,7 +510,7 @@ async function insertGame(gameData) {
   return id
 }
 
-//////// RETRIEVE ROW FROM ID NAME/VALUE ////////
+////////  RETRIEVE ROW FROM ID NAME/VALUE  ////////
 async function getRowFromId(table, idName, id) {
   let result = {}
   const db = await getDBDriver()
@@ -476,7 +526,7 @@ async function getRowFromId(table, idName, id) {
   return result
 }
 
-//////// INSERT INTO `game_tags` TABLE ////////
+////////  INSERT INTO `game_tags` TABLE  ////////
 async function insertIntoGameTags(gtid, gid, tid) {
   const db = await getDBDriver()
   await db.open()
@@ -493,7 +543,7 @@ async function insertIntoGameTags(gtid, gid, tid) {
   await db.close()
 }
 
-/////// RETRIEVE GAME TAGS AND APPEND THEM TO GAME OBJECT ///////
+///////  RETRIEVE GAME TAGS AND APPEND THEM TO GAME OBJECT  ///////
 async function getGameTags(gameObj) {
   const db = await getDBDriver()
   await db.open()
@@ -517,7 +567,7 @@ async function getGameTags(gameObj) {
   return gameObj
 }
 
-//////// INSERT NEW TAG ////////
+////////  INSERT NEW TAG  ////////
 async function insertTag(tagName) {
   const db = await getDBDriver()
   await db.open()
@@ -525,7 +575,7 @@ async function insertTag(tagName) {
   await db.close()
 }
 
-//////// GET TAG ID BY NAME ////////
+////////  GET TAG ID BY NAME  ////////
 async function getTagIDs(gid) {
   const db = await getDBDriver()
   await db.open()
@@ -539,7 +589,7 @@ async function getTagIDs(gid) {
   return result
 }
 
-//////// DELETE GAME FROM DATABASE ////////
+////////  DELETE GAME FROM DATABASE  ////////
 async function deleteGame(gid) {
   const db = await getDBDriver()
   await db.open()
@@ -547,7 +597,7 @@ async function deleteGame(gid) {
   await db.close()
 }
 
-//////// UPDATE GAME VALUES ////////
+////////  UPDATE GAME VALUES  ////////
 async function updateGame(gameData) {
   const db = await getDBDriver()
   await db.open()
@@ -569,7 +619,7 @@ async function updateGame(gameData) {
   await db.close()
 }
 
-//////// UPDATE GAME TAG ////////
+////////  UPDATE GAME TAG  ////////
 async function updateGameTag(gameData) {
   const db = await getDBDriver()
   await db.open()
@@ -582,7 +632,7 @@ async function updateGameTag(gameData) {
   await db.close()
 }
 
-//////// GET TAG NAME BY TAG ID ////////
+////////  GET TAG NAME BY TAG ID  ////////
 async function getTagById(tid) {
   const db = await getDBDriver()
   await db.open()
@@ -594,6 +644,7 @@ async function getTagById(tid) {
   return tagName
 }
 
+////////  GET TAG IDS BY FILTER ID  ////////
 async function getTidsByFids(fid) {
   const db = await getDBDriver()
   await db.open()
@@ -607,6 +658,7 @@ async function getTidsByFids(fid) {
   return results
 }
 
+////////  GET GAME IDS BY TAG IDS  ////////
 async function getGidsByTids(tid) {
   const db = await getDBDriver()
   await db.open()
@@ -618,4 +670,27 @@ async function getGidsByTids(tid) {
   await stmt.finalize()
   await db.close()
   return results
+}
+
+////////  INSERT NEW FILTER  ////////
+// Also returns the auto-incremented `fid` of the newly inserted filter.
+async function insertFilter(name) {
+  const db = await getDBDriver()
+  await db.open()
+  let stmt = await db.prepare("INSERT OR IGNORE INTO filters (name) VALUES (?)")
+  const id = await stmt.run([name], function() { return this.lastID })
+  await stmt.finalize()
+  await db.close()
+  return id
+}
+
+////////  ASSOCIATE FILTER WITH TAGS  ////////
+// Also returns the auto-incremented `fid` of the newly inserted filter.
+async function insertFilterTag(fid, tid) {
+  const db = await getDBDriver()
+  await db.open()
+  let stmt = await db.prepare("INSERT OR IGNORE INTO filter_tags (fid,tid) VALUES (?,?)")
+  await stmt.run([fid, tid])
+  await stmt.finalize()
+  await db.close()
 }

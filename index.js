@@ -6,8 +6,13 @@ const { open } = require('sqlite')
 const path = require('path')
 const DATABASE = './assets/gameDB.sqlite';
 
-// Prevent garbage collection on mainWindow.
+// Prevent garbage collection on all windows.
 let mainWindow
+let addGameModal
+let addTagModal
+let editGameModal
+let addFilterModal
+let removeFiltersModal
 
 // DB connection driver.
 async function getDBDriver() {
@@ -27,7 +32,7 @@ async function createWindow() {
   // Create window state manager.
   let winState = windowStateKeeper({
     defaultWidth: 1600,
-    defaultHeight: 800
+    defaultHeight: 1000
   })
   // Create main app window.
   mainWindow = new BrowserWindow({
@@ -121,6 +126,7 @@ app.whenReady().then(() => {
         console.log("Nothing to update!")
       }
     }
+    addGameModal.close()
   })
 
   // TAGS:
@@ -131,6 +137,7 @@ app.whenReady().then(() => {
   ipcMain.on('submitTag', async (event, tagName) => {
     // SQL statement to insert new tag.
     await insertTag(tagName)
+    addTagModal.close()
   })
 
   // FILTERS:
@@ -151,6 +158,7 @@ app.whenReady().then(() => {
       // Update filter dropdown list on mainWindow.
       let filterOpt = { 'name': filter['name'], 'fid': fid.lastID }
       await mainWindow.webContents.send('add-filter', filterOpt)
+      addFilterModal.close()
     }
   })
 
@@ -207,6 +215,7 @@ app.whenReady().then(() => {
     // Convert tag ID to tag name in gameData object.
     gameData['genre'] = await getTagById(gameData['genre'])
     await mainWindow.webContents.send('update-game-row', gameData)
+    editGameModal.close()
   })
 
 
@@ -230,14 +239,17 @@ app.whenReady().then(() => {
 
   // FILTERS:
 
-  //////// HANDLE MODAL FOR REMOVING FILTERS ////////
+  //////// MODAL TRIGGER FOR REMOVING FILTERS ////////
   ipcMain.handle('modal:removeFilters', removeFilters)
   //////// HANDLE REMOVING FILTERS ////////
   ipcMain.on('remove-filters', async (event, filters) => {
     for (let f = 0; f < filters.length; f++) {
-      await removeFilter(filters[f].fid)
-      await removeFilterTags(filters[f].fid)
+      await removeFilter(filters[f])
+      await removeFilterTags(filters[f])
     }
+    let updatedFilters = await getAllFromTable("filters")
+    mainWindow.webContents.send('update-filter-dropdown', updatedFilters)
+    removeFiltersModal.close()
   })
 
 
@@ -266,7 +278,7 @@ app.whenReady().then(() => {
 
 //////// ADD GAME MODAL ////////
 async function addGame() {
-  let addGameModal = new BrowserWindow({
+  addGameModal = new BrowserWindow({
     width: 710,
     height: 450,
     modal: true,
@@ -293,9 +305,9 @@ async function addGame() {
 
 //////// ADD TAG MODAL ////////
 async function addTag() {
-  let addTagModal = new BrowserWindow({
-    width: 600,
-    height: 300,
+  addTagModal = new BrowserWindow({
+    width: 750,
+    height: 310,
     modal: true,
     parent: mainWindow,
     autoHideMenuBar: true,
@@ -312,14 +324,14 @@ async function addTag() {
     addTagModal.show()
   })
   // Uncomment to view Chrome dev tools on this modal.
-  addTagModal.webContents.openDevTools()
+  // addTagModal.webContents.openDevTools()
 }
 
 //////// EDIT GAME MODAL ////////
 async function editGame(gameData) {
-  let editGameModal = new BrowserWindow({
-    width: 600,
-    height: 300,
+  editGameModal = new BrowserWindow({
+    width: 710,
+    height: 450,
     modal: true,
     parent: mainWindow,
     autoHideMenuBar: true,
@@ -339,14 +351,14 @@ async function editGame(gameData) {
     await editGameModal.show()
   })
   // Uncomment to view Chrome dev tools on this modal.
-  editGameModal.webContents.openDevTools()
+  // editGameModal.webContents.openDevTools()
 }
 
 //////// ADD FILTER MODAL ////////
 async function addFilter() {
-  let addFilterModal = new BrowserWindow({
-    width: 500,
-    height: 400,
+  addFilterModal = new BrowserWindow({
+    width: 1000,
+    height: 600,
     modal: true,
     parent: mainWindow,
     autoHideMenuBar: true,
@@ -366,14 +378,14 @@ async function addFilter() {
     addFilterModal.show()
   })
   // Uncomment to view Chrome dev tools on this modal.
-  addFilterModal.webContents.openDevTools()
+  // addFilterModal.webContents.openDevTools()
 }
 
 //////// REMOVE FILTER MODAL ////////
 async function removeFilters() {
-  let removeFiltersModal = new BrowserWindow({
-    width: 500,
-    height: 400,
+  removeFiltersModal = new BrowserWindow({
+    width: 800,
+    height: 600,
     modal: true,
     parent: mainWindow,
     autoHideMenuBar: true,
@@ -393,7 +405,7 @@ async function removeFilters() {
     removeFiltersModal.show()
   })
   // Uncomment to view Chrome dev tools on this modal.
-  removeFiltersModal.webContents.openDevTools()
+  // removeFiltersModal.webContents.openDevTools()
 }
 
 //////// CONFIRM GAME DELETION DIALOG ////////

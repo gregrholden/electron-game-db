@@ -123,6 +123,24 @@ window.libraryAPI.handleExistingFilters((event, filters) => {
   }
 })
 
+/////////////////////////////////////
+///// UPDATE FILTERS DROPDOWN ///////
+/////////////////////////////////////
+window.libraryAPI.handleUpdateFilterDD((event, filters) => {
+  const oldDropdown = document.getElementById('filters')
+  const newDropdown = document.createElement('select')
+  newDropdown.setAttribute('id', 'filters')
+  newDropdown.setAttribute('name', 'filters')
+  for (let i = 0; i < filters.length; i++) {
+    let option = document.createElement('option')
+    option.setAttribute('value', filters[i].fid)
+    let optionText = document.createTextNode(filters[i].name)
+    option.appendChild(optionText)
+    newDropdown.appendChild(option)
+  }
+  oldDropdown.parentNode.replaceChild(newDropdown, oldDropdown)
+})
+
 //////////////////////////////////////////////////
 ///// APPEND NEWLY ADDED FILTERS TO DROPDOWN /////
 //////////////////////////////////////////////////

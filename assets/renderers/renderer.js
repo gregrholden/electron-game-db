@@ -59,8 +59,8 @@ window.libraryAPI.handleLibraryRefresh((event, games) => {
 // Currenly only used to add a new game, not update full game library.
 // See above libraryRefresh() for a full chain of updates to the library.
 window.libraryAPI.handleUpdateGames((event, game) => {
-  if (document.getElementById('gameLib') !== null) {
-    let gameLib = document.getElementById('gameLib')
+  if (document.getElementById('rows') !== null) {
+    let gameLib = document.getElementById('rows')
     // Append new row to the game library table.
     gameLib.appendChild(createGameRow(game))
   } else {
@@ -150,6 +150,14 @@ const addFilterBtn = document.getElementById('addFilterBtn')
 // Open a modal with the form to submit a new game.
 addFilterBtn.addEventListener('click', async () => {
   await window.libraryAPI.handleAddFilterBtn()
+})
+
+//////////////////////////////////////////
+///// HANDLE REMOVE FILTERS BUTTON ///////
+//////////////////////////////////////////
+const removeFiltersBtn = document.getElementById('removeFiltersBtn')
+removeFiltersBtn.addEventListener('click', async () => {
+  await window.libraryAPI.handleRemoveFiltersBtn()
 })
 
 ///////////////////////////////////////

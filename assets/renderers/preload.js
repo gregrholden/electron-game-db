@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('libraryAPI', {
   handleAddFilterBtn:     ()          => ipcRenderer.invoke('modal:addFilter'),
   handleSubmitFilter:     (filter)    => ipcRenderer.send('submit-filter', filter),
   handleAddFilter:        (filter)    => ipcRenderer.on('add-filter', filter),
+  handleRemoveFiltersBtn: ()          => ipcRenderer.invoke('modal:removeFilters'),
+  handleSubmitRmvFilters: (filters)   => ipcRenderer.send('remove-filters', filters),
   // Utility APIs.
   sendToConsole:          (message)   => ipcRenderer.send('console', message)
 })

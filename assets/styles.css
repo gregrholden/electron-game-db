@@ -97,9 +97,36 @@ button:focus {
 
 label {
   color: #fff;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
+  margin-right: 1rem;
+  margin-left: 1rem;
 }
 
 #menuOptions {
   margin: 1rem;
+}
+
+h3 {
+  display: block;
+  color: #fff;
+  font-size: 2rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+input {
+  margin-left: 1rem;
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+#tags_dropdown {
+  font-size: 1.4rem;
+}
+
+#submitGameBtn {
+  display: block;
+  margin: 2rem auto 0 auto;
+  font-size: 1.8rem;
+  padding: 1.25rem;
 }

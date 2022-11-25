@@ -1,6 +1,6 @@
 # Background
 
-This app was built as the final project for a graduate course on database technology for Frostburg State University's MS in Applied Computer Science. The course asked that we build a database application using a relational database and implement the solution however we wanted. I chose a simple CRUD app that would handle manually uploading metadata about video games. It uses Electron.js as the app engine and a locally stored SQLite3 database. It is not an overly robust or in-depth solution, and not a solution I would build if this were a professional project. The focus was more about demonstrating knowledge of SQL within an application than about building a production-grade app and time constraints prevented more robust development and integration with web services or APIs as I would have wanted.
+This app was built as the final project for a graduate course on database technology for Frostburg State University's MS in Applied Computer Science. The course asked that we build a database application using a relational database and implement the solution however we wanted. I chose a simple CRUD app that would handle manually uploading metadata about video games. It uses Electron.js as the app engine and a locally stored SQLite3 database.
 
 # Usage
 

@@ -624,7 +624,6 @@ async function insertFilter(name) {
 }
 
 ////////  INSERT FILTER_TAG  ////////
-// Also returns the auto-incremented `fid` of the newly inserted filter.
 async function insertFilterTag(fid, tid) {
   const db = await getDBDriver()
   await db.open()

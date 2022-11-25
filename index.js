@@ -435,35 +435,35 @@ async function initDB() {
 
   // Create library table.
   await db.exec(`CREATE TABLE IF NOT EXISTS library(
-                  lid            INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  name           TEXT  NOT NULL)`
+                  lid            INTEGER        PRIMARY KEY AUTOINCREMENT,
+                  name           VARCHAR(128)   NOT NULL)`
         )
   // Create games table.
   await db.exec(`CREATE TABLE IF NOT EXISTS games(
-                  gid            INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  name           TEXT  NOT NULL,
+                  gid            INTEGER        PRIMARY KEY AUTOINCREMENT,
+                  name           VARCHAR(128)   NOT NULL,
                   release_date   DATE,
-                  platform       TEXT,
-                  developer      TEXT,
-                  publisher      TEXT)`
+                  platform       VARCHAR(64),
+                  developer      VARCHAR(64),
+                  publisher      VARCHAR(64))`
         )
   // Create tags table.
   await db.exec(`CREATE TABLE IF NOT EXISTS tags(
-                  tid            INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  name           TEXT  UNIQUE NOT NULL)`
+                  tid            INTEGER        PRIMARY KEY AUTOINCREMENT,
+                  name           VARCHAR(128)   UNIQUE NOT NULL)`
         )
   // Create associative table to connect games and tags.
   await db.exec(`CREATE TABLE IF NOT EXISTS game_tags(
-                  gtid           INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  gid            INTEGER   NOT NULL,
-                  tid            INTEGER   NOT NULL,
+                  gtid           INTEGER        PRIMARY KEY AUTOINCREMENT,
+                  gid            INTEGER        NOT NULL,
+                  tid            INTEGER        NOT NULL,
                   FOREIGN KEY(gid) REFERENCES games(gid),
                   FOREIGN KEY(tid) REFERENCES tags(tid))`
         )
   // Create filters table.
   await db.exec(`CREATE TABLE IF NOT EXISTS filters(
-                  fid            INTEGER   PRIMARY KEY AUTOINCREMENT,
-                  name           TEXT      UNIQUE NOT NULL)`
+                  fid            INTEGER        PRIMARY KEY AUTOINCREMENT,
+                  name           VARCHAR(128)   UNIQUE NOT NULL)`
         )
   // Create associative table to connect filters and tags.
   await db.exec(`CREATE TABLE IF NOT EXISTS filter_tags(

@@ -8,7 +8,9 @@ To use the app, ensure you have Node.js v14+ installed on your machine.
 
 Navigate your terminal/CLI into the app root (e.g. `cd electron-game-db`), then:
 
-Run: `npm run start`
+Run: `npm install`
+
+Then run: `npm run start`
 
 # Resources for Learning Electron
 

@@ -6,7 +6,6 @@
   "build": {
     "appID": "com.electron-game-db",
     "files": [
-      "app/**/*",
       "node_modules/**/*",
       "package.json"
     ]

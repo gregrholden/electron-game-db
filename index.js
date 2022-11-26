@@ -85,7 +85,7 @@ async function createWindow() {
   winState.manage(mainWindow)
 
   // Uncomment to view Chrome dev tools on the main window.
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
 }
 
 

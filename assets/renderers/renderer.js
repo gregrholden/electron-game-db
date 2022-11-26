@@ -139,6 +139,11 @@ window.libraryAPI.handleUpdateFilterDD((event, filters) => {
     newDropdown.appendChild(option)
   }
   oldDropdown.parentNode.replaceChild(newDropdown, oldDropdown)
+  // Reattach the 'change' event listener.
+  const filtersDropdown = document.getElementById('filters')
+  filtersDropdown.addEventListener('change', async (event) => {
+    await libraryAPI.handleChangeFilter(event.target.value)
+  })
 })
 
 //////////////////////////////////////////////////

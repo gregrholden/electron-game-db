@@ -766,12 +766,12 @@ async function getGidsByTids(tid) {
 async function updateGame(gameData) {
   const db = await getDBDriver()
   await db.open()
-  bindValues = [gameData['name'],
-                gameData['developer'],
-                gameData['publisher'],
-                gameData['release_date'],
-                gameData['platform'],
-                gameData['gid']]
+  let bindValues = [gameData['name'],
+                    gameData['developer'],
+                    gameData['publisher'],
+                    gameData['release_date'],
+                    gameData['platform'],
+                    gameData['gid']]
   const stmt = await db.prepare("UPDATE games SET name=?, " +
                                 "developer=?, " +
                                 "publisher=?, " +
